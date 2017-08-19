@@ -41,11 +41,18 @@ func (gtfs Gtfs) AllStops() (map[string]*Stop, error) {
 	stops := make(map[string]*Stop)
 
 	for rows.Next() {
-		stop := Stop{}
-		err := rows.Scan(&stop.id, &stop.lat, &stop.lon)
+		var id string
+		var lon, lat float64
+
+		err := rows.Scan(&id, &lat, &lon)
 		if err != nil {
 			return nil, err
 		}
+
+		stop := Stop{id: id}
+		stop.SetLat(lat)
+		stop.SetLng(lon)
+
 		stops[stop.id] = &stop
 	}
 

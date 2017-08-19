@@ -1,5 +1,9 @@
 package gtfs
 
+import (
+	"github.com/paulmach/go.geo"
+)
+
 const (
 	tbStops     = "stops"
 	tbTrips     = "trips"
@@ -7,19 +11,10 @@ const (
 )
 
 type Stop struct {
-	id  string
-	lon float64
-	lat float64
+	id string
+	geo.Point
 }
 
 func (stop *Stop) Id() string {
 	return stop.id
-}
-
-func (stop *Stop) Lon() float64 {
-	return stop.lon
-}
-
-func (stop *Stop) Lat() float64 {
-	return stop.lat
 }
