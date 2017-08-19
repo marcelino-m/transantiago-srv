@@ -3,9 +3,10 @@ package fetcher
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"time"
+	"github.com/marcelino-m/transantiago-srv/gtfs"
 )
 
 var (
@@ -40,7 +41,7 @@ func FetchStopDataRaw(stopcode string, client *http.Client) (*goquery.Document, 
 	return goquery.NewDocumentFromResponse(resp)
 }
 
-func FetchStopData(stopcode string, client *http.Client) ([]Bus, error) {
+func FetchStopData(stopcode string, client *http.Client) ([]*gtfs.Bus, error) {
 
 	doc, err := FetchStopDataRaw(stopcode, client)
 	if err != nil {

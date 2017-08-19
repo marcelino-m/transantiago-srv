@@ -3,37 +3,15 @@ package fetcher
 import (
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/marcelino-m/transantiago-srv/gtfs"
 )
 
-type Bus struct {
-	id          string
-	service     string
-	arrivaltime string
-	dist        string
-}
+func Parser(doc *goquery.Document) []*gtfs.Bus {
 
-func (bus *Bus) Id() string {
-	return bus.id
-}
+	buses := []*gtfs.Bus{}
 
-func (bus *Bus) Service() string {
-	return bus.service
-}
-
-func (bus *Bus) ArrivalTime() time.Duration {
-	return time.Second * 0
-}
-
-func (bus *Bus) DistToStop() float32 {
-	return 0
-}
-
-func Parser(doc *goquery.Document) []Bus {
-
-	buses := []Bus{}
 	var currService string
 	var re = regexp.MustCompile(`(\r\n|\n|\r)`)
 	table := doc.Find("div > div > table").Not(".cabecera4")
@@ -52,26 +30,17 @@ func Parser(doc *goquery.Document) []Bus {
 			arrt := re.ReplaceAllString(strings.Trim(nodestd.Eq(2).Text(), "\n\r "), "")
 			dist := re.ReplaceAllString(strings.Trim(nodestd.Eq(3).Text(), "\n\r "), "")
 
-			bus := Bus{
-				id:          id,
-				arrivaltime: arrt,
-				dist:        dist,
-				service:     currService,
-			}
+			bus := gtfs.NewBus(id, currService, arrt, dist)
 			buses = append(buses, bus)
+
 		case 3:
 			id := re.ReplaceAllString(strings.Trim(nodestd.Eq(0).Text(), "\n\r "), "")
 			arrt := re.ReplaceAllString(strings.Trim(nodestd.Eq(1).Text(), "\n\r "), "")
 			dist := re.ReplaceAllString(strings.Trim(nodestd.Eq(2).Text(), "\n\r "), "")
 
-			bus := Bus{
-				id:          id,
-				arrivaltime: arrt,
-				dist:        dist,
-				service:     currService,
-			}
-
+			bus := gtfs.NewBus(id, currService, arrt, dist)
 			buses = append(buses, bus)
+
 		case 2:
 			// Bus out of service
 		case 1:
