@@ -1,0 +1,91 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "HeAOIQS+TI75+Afm0qgKXdg+37I=",
+			"path": "github.com/PuerkitoBio/goquery",
+			"revision": "ce645ea5e67a713599b7415f21f0786451fa9554",
+			"revisionTime": "2017-08-16T13:38:31Z"
+		},
+		{
+			"checksumSHA1": "2rWSos1D+xqNSGkvEMOG3pntod8=",
+			"path": "github.com/andybalholm/cascadia",
+			"revision": "349dd0209470eabd9514242c688c403c0926d266",
+			"revisionTime": "2016-12-24T14:14:13Z"
+		},
+		{
+			"checksumSHA1": "eubB2tzhoN+dFweoj9jXoYsDH2s=",
+			"path": "github.com/go-redis/redis",
+			"revision": "19c1c2272e00c1aaa903cf574c746cd449f9cd3c",
+			"revisionTime": "2017-08-15T08:01:05Z"
+		},
+		{
+			"checksumSHA1": "x/1eSGi0dmQIUdAzjKlPVPr1ndw=",
+			"path": "github.com/go-redis/redis/internal",
+			"revision": "19c1c2272e00c1aaa903cf574c746cd449f9cd3c",
+			"revisionTime": "2017-08-15T08:01:05Z"
+		},
+		{
+			"checksumSHA1": "GQZsUVg/+6UpQAYpc4luMvMutSI=",
+			"path": "github.com/go-redis/redis/internal/consistenthash",
+			"revision": "19c1c2272e00c1aaa903cf574c746cd449f9cd3c",
+			"revisionTime": "2017-08-15T08:01:05Z"
+		},
+		{
+			"checksumSHA1": "VP0K8vvf716n6xuzAZTvpz+wTwc=",
+			"path": "github.com/go-redis/redis/internal/hashtag",
+			"revision": "19c1c2272e00c1aaa903cf574c746cd449f9cd3c",
+			"revisionTime": "2017-08-15T08:01:05Z"
+		},
+		{
+			"checksumSHA1": "GorDWvfUq/08t1GG6rfvs5LKDqk=",
+			"path": "github.com/go-redis/redis/internal/pool",
+			"revision": "19c1c2272e00c1aaa903cf574c746cd449f9cd3c",
+			"revisionTime": "2017-08-15T08:01:05Z"
+		},
+		{
+			"checksumSHA1": "Ct2AS6Z9YmTAlKOMsBrhwvpXAPY=",
+			"path": "github.com/go-redis/redis/internal/proto",
+			"revision": "19c1c2272e00c1aaa903cf574c746cd449f9cd3c",
+			"revisionTime": "2017-08-15T08:01:05Z"
+		},
+		{
+			"checksumSHA1": "qNbIMcsoKG3jP+boPRo1CQn9tqA=",
+			"path": "github.com/mattn/go-sqlite3",
+			"revision": "6654e412c3c7eabb310d920cf73a2102dbf8c632",
+			"revisionTime": "2017-08-01T17:06:40Z"
+		},
+		{
+			"checksumSHA1": "TTtSE7f8JlF5bwwOI/M2jSKQMyU=",
+			"path": "github.com/paulmach/go.geo",
+			"revision": "b160a6efed6c2a8af1b59ce870dd8802056fcad5",
+			"revisionTime": "2017-03-21T18:35:34Z"
+		},
+		{
+			"checksumSHA1": "i5DYjDaR52hXzynKeIW6RZY/4yI=",
+			"path": "github.com/paulmach/go.geojson",
+			"revision": "40612a87147b9cf5cd0e397ced54d89e623647ff",
+			"revisionTime": "2017-03-27T17:05:36Z"
+		},
+		{
+			"checksumSHA1": "dr5+PfIRzXeN+l1VG+s0lea9qz8=",
+			"path": "golang.org/x/net/context",
+			"revision": "ab5485076ff3407ad2d02db054635913f017b0ed",
+			"revisionTime": "2017-07-19T21:11:51Z"
+		},
+		{
+			"checksumSHA1": "vqc3a+oTUGX8PmD0TS+qQ7gmN8I=",
+			"path": "golang.org/x/net/html",
+			"revision": "ab5485076ff3407ad2d02db054635913f017b0ed",
+			"revisionTime": "2017-07-19T21:11:51Z"
+		},
+		{
+			"checksumSHA1": "00eQaGynDYrv3tL+C7l9xH0IDZg=",
+			"path": "golang.org/x/net/html/atom",
+			"revision": "ab5485076ff3407ad2d02db054635913f017b0ed",
+			"revisionTime": "2017-07-19T21:11:51Z"
+		}
+	],
+	"rootPath": "github.com/marcelino-m/transantiago-srv"
+}
