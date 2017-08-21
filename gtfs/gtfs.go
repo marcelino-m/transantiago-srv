@@ -52,7 +52,7 @@ func (gtfs Gtfs) AllStops() (map[string]*Stop, error) {
 		stop := Stop{id: id}
 		stop.SetLat(lat)
 		stop.SetLng(lon)
-
+		stop.Transform(geo.Mercator.Project)
 		stops[stop.id] = &stop
 	}
 
@@ -96,10 +96,10 @@ func (gtfs Gtfs) Shape(route *Route, dir Direction) (*Shape, error) {
 
 	rows, err := gtfs.conn.Query(
 		`SELECT
-              shape_pt_lat, shape_pt_lon FROM shapes WHERE shape_id =
-               (SELECT  DISTINCT shape_id FROM trips WHERE direction_id = ?  and route_id = ? LIMIT 1)
-             ORDER BY
-              shape_pt_sequence ASC`,
+           shape_pt_lat, shape_pt_lon FROM shapes WHERE shape_id =
+            (SELECT  DISTINCT shape_id FROM trips WHERE direction_id = ?  and route_id = ? LIMIT 1)
+           ORDER BY
+             shape_pt_sequence ASC`,
 		dir,
 		route.Id(),
 	)
@@ -108,6 +108,7 @@ func (gtfs Gtfs) Shape(route *Route, dir Direction) (*Shape, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
 	shape := Shape{}
 	var lat, lon float64
 
@@ -122,30 +123,32 @@ func (gtfs Gtfs) Shape(route *Route, dir Direction) (*Shape, error) {
 		shape.Push(p)
 	}
 
+	shape.Transform(geo.Mercator.Project)
+
 	return &shape, nil
 }
 
 //  Get all routes
-func (gtfs Gtfs) Routes() ([]*Route, error) {
+func (gtfs Gtfs) Routes() (map[string]*Route, error) {
 	rows, err := gtfs.conn.Query(
 		"SELECT route_id, route_short_name, route_long_name  FROM routes",
 	)
 
 	if err != nil {
-		return []*Route{}, err
+		return nil, err
 	}
 
 	defer rows.Close()
-	routes := []*Route{}
+	routes := make(map[string]*Route)
 
 	for rows.Next() {
 		r := Route{}
 		err := rows.Scan(&r.id, &r.sname, &r.lname)
 		if err != nil {
-			return []*Route{}, err
+			return nil, err
 		}
 
-		routes = append(routes, &r)
+		routes[r.Id()] = &r
 	}
 
 	return routes, nil

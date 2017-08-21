@@ -8,9 +8,9 @@ import (
 	"github.com/marcelino-m/transantiago-srv/gtfs"
 )
 
-func Parser(doc *goquery.Document) []*gtfs.Bus {
+func Parser(doc *goquery.Document) []*gtfs.BusDat {
 
-	buses := []*gtfs.Bus{}
+	buses := []*gtfs.BusDat{}
 
 	var currService string
 	var re = regexp.MustCompile(`(\r\n|\n|\r)`)

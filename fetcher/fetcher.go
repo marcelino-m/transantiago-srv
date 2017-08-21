@@ -41,14 +41,18 @@ func FetchStopDataRaw(stopcode string, client *http.Client) (*goquery.Document, 
 	return goquery.NewDocumentFromResponse(resp)
 }
 
-func FetchStopData(stopcode string, client *http.Client) ([]*gtfs.Bus, error) {
+func FetchStopData(stopcode string, client *http.Client) ([]*gtfs.BusDat, error) {
 
 	doc, err := FetchStopDataRaw(stopcode, client)
 	if err != nil {
 		return nil, err
 	}
+	buss := Parser(doc)
+	for _, b := range buss {
+		b.SetGoingToStop(stopcode)
+	}
 
-	return Parser(doc), nil
+	return buss, nil
 }
 
 func makUrl(stopcode string) string {
