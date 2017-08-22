@@ -1,6 +1,0 @@
-
-* Features
-  - Agregar punto de extraccion de datos desde transantiago
-    ejemplo de query: https://www.transantiago.cl/predictor/prediccion?codsimt=PA11&codser=
-
-
