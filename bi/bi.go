@@ -14,12 +14,19 @@ type Cicle struct {
 	stop2shape map[string]*Gtfs.Shape
 }
 
-type RouteCicle map[string]*Cicle
-
 type Bi struct {
-	routecicle RouteCicle
+	routecicle map[string]*Cicle
 	allstops   map[string]*Gtfs.Stop
 	allroutes  map[string]*Gtfs.Route
+	gtfs       *Gtfs.Gtfs
+}
+
+// NewCicle ...
+func NewCicle() *Cicle {
+	c := &Cicle{
+		stop2shape: make(map[string]*Gtfs.Shape),
+	}
+	return c
 }
 
 // NewBi ...
@@ -31,7 +38,12 @@ func NewBi(gtfsdb string) (*Bi, error) {
 		return nil, err
 	}
 
-	bi := Bi{}
+	bi := Bi{
+		routecicle: make(map[string]*Cicle),
+		allstops:   make(map[string]*Gtfs.Stop),
+		allroutes:  make(map[string]*Gtfs.Route),
+	}
+
 	bi.allstops, err = gtfs.AllStops()
 	if err != nil {
 		return nil, err
@@ -42,22 +54,34 @@ func NewBi(gtfsdb string) (*Bi, error) {
 		return nil, err
 	}
 
+	return &bi, nil
+
+}
+
+//  InitializeBi Initialize internal state of Bi, this operation
+//  take a lot of  time to finish, for this reason is splited away
+//  so we can postpone until the last minute
+func (bi *Bi) InitializeBi() error {
+
+	var err error = nil
+	gtfs := bi.gtfs
+
 	for _, r := range bi.allroutes {
-		cicle := Cicle{}
+		cicle := NewCicle()
 
 		cicle.going, err = gtfs.Shape(r, Gtfs.Going)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		cicle.regres, err = gtfs.Shape(r, Gtfs.Regress)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		stopg, err := gtfs.StopsByRoute(r, Gtfs.Going, bi.allstops)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, s := range stopg {
@@ -66,27 +90,27 @@ func NewBi(gtfsdb string) (*Bi, error) {
 
 		stopr, err := gtfs.StopsByRoute(r, Gtfs.Regress, bi.allstops)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, s := range stopr {
 			cicle.stop2shape[s.Id()] = cicle.regres
 		}
 
-		bi.routecicle[r.Id()] = &cicle
+		bi.routecicle[r.Id()] = cicle
 	}
 
-	return &bi, nil
+	return nil
 }
 
 //  ...
-func (bi *Bi) GetShape(route *Gtfs.Route, stop *Gtfs.Stop) *Gtfs.Shape {
+func (bi *Bi) Shape(route *Gtfs.Route, stop *Gtfs.Stop) *Gtfs.Shape {
 	shape := bi.routecicle[route.Id()].stop2shape[stop.Id()]
 	return shape
 }
 
 //  Get Stop from stopid
-func (bi *Bi) GetStop(stopid string) *Gtfs.Stop {
+func (bi *Bi) Stop(stopid string) *Gtfs.Stop {
 	stop, ok := bi.allstops[stopid]
 	if !ok {
 		return nil
@@ -95,8 +119,13 @@ func (bi *Bi) GetStop(stopid string) *Gtfs.Stop {
 	return stop
 }
 
+//  Get all Stop from stopid
+func (bi *Bi) AllStop() map[string]*Gtfs.Stop {
+	return bi.allstops
+}
+
 //  Get Route from routeid
-func (bi *Bi) GetRoute(routeid string) *Gtfs.Route {
+func (bi *Bi) Route(routeid string) *Gtfs.Route {
 	r, ok := bi.allroutes[routeid]
 	if !ok {
 		return nil
@@ -106,14 +135,14 @@ func (bi *Bi) GetRoute(routeid string) *Gtfs.Route {
 }
 
 //  Deduce position from bus metadata
-func (bi *Bi) GetPosition(bus *Gtfs.BusDat) *geo.Point {
-	stop := bi.GetStop(bus.Id())
-	route := bi.GetRoute(bus.Route())
+func (bi *Bi) Position(bus *Gtfs.BusDat) *geo.Point {
+	stop := bi.Stop(bus.Id())
+	route := bi.Route(bus.Route())
 	if stop == nil || route == nil {
 		return nil
 	}
 
-	shape := bi.GetShape(route, stop)
+	shape := bi.Shape(route, stop)
 	ts := shape.Project(&stop.Point)
 	ps := shape.Interpolate(ts)
 
