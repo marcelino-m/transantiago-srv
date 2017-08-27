@@ -5,7 +5,6 @@ import (
 
 	Gtfs "github.com/marcelino-m/transantiago-srv/gtfs"
 	"github.com/paulmach/go.geo"
-	"log"
 )
 
 type Cicle struct {
@@ -143,33 +142,39 @@ func (bi *Bi) Position(bus *Gtfs.BusDat) *geo.Point {
 	}
 
 	shape := bi.Shape(route, stop)
-	ts := shape.Project(&stop.Point)
-	ps := shape.Interpolate(ts)
-
-	var eps float64 = 10
-
 	dis2stop := bus.DistToStop()
-	delta := ts / 2
-	ft := delta
-	count := 100
-	for {
+	length := shape.Length()
+	eps := 10.0
 
-		if count > 100 {
-			log.Printf("Can't locate bus %s\n,stop: %s, dist to stop %f", bus.Id(), stop.Id(), dis2stop)
-			return nil
+	for i := 0; i < length; i++ {
+		dis := stop.DistanceFrom(shape.GetAt(i))
+		delta := dis2stop - dis
+		if math.Abs(delta) <= eps {
+			return shape.GetAt(i)
+		} else if delta < 0 {
+			continue
 		}
 
-		bus := shape.Interpolate(ft)
-		dis := bus.DistanceFrom(ps)
-		if math.Abs(dis-dis2stop) <= eps {
-			return bus
-		} else if dis < dis2stop {
-			delta := delta / 2
-			ft = ft + delta
-		} else {
-			delta := delta / 2
-			ft = ft - delta
+		line := geo.NewLine(shape.GetAt(i-1), shape.GetAt(i))
+		step := 0.5
+		t := step
+		for {
+			// binary search
+			p := line.Interpolate(t)
+			dis := stop.DistanceFrom(p)
+			delta := dis2stop - dis
+			if math.Abs(delta) <= eps {
+				return p
+			} else if delta < 0 {
+				step /= 2
+				t += step
+			} else {
+				step /= 2
+				t -= step
+			}
 		}
+
 	}
 
+	return nil
 }
