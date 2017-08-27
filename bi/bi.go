@@ -161,8 +161,8 @@ func (bi *Bi) Position(bus *Gtfs.BusDat) *geo.Point {
 		for {
 			// binary search
 			p := line.Interpolate(t)
-			dis := stop.DistanceFrom(p)
-			delta := dis2stop - dis
+			dis = stop.DistanceFrom(p)
+			delta = dis2stop - dis
 			if math.Abs(delta) <= eps {
 				return p
 			} else if delta < 0 {
