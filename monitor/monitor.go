@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -8,20 +9,45 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
+	Bi "github.com/marcelino-m/transantiago-srv/bi"
 	"github.com/marcelino-m/transantiago-srv/fetcher"
 	"github.com/marcelino-m/transantiago-srv/gtfs"
+	"strings"
 )
 
-// main ...
 func main() {
 
-	gtfsc, err := gtfs.Connect("/home/marcelo/lab/tase/gtfs/gtfs.db")
+	stopmon := flag.String("stop", "all", "Stops to momintor")
+	nthread := flag.Int("nthread", 200, "Number of concurrent request")
+	flag.Parse()
+
+	bi, err := Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db")
 
 	if err != nil {
 		log.Fatalln("Fail to connect to gtfs DB (sqlite3 backend)")
 	}
 
-	stops, err := gtfsc.AllStops()
+	var stops []*gtfs.Stop
+
+	if *stopmon == "all" {
+		tmp := bi.AllStop()
+		for _, s := range tmp {
+			stops = append(stops, s)
+		}
+	} else {
+		bs := strings.Split(*stopmon, ",")
+		for _, b := range bs {
+			if b == "" {
+				continue
+			}
+			stop := bi.Stop(strings.ToUpper(b))
+			if stop == nil {
+				log.Fatalf("No exit stops %s\n", b)
+			}
+			stops = append(stops, stop)
+		}
+	}
+
 	if err != nil {
 		log.Fatalln("Fail to get stops data")
 	}
@@ -37,9 +63,13 @@ func main() {
 		log.Fatal("Fail to conect to redis server.")
 	}
 
-	queueSize := 500
+	maxidleconns := *nthread / 4
+	if maxidleconns < 2 {
+		maxidleconns = 2
+	}
+
 	tr := &http.Transport{
-		MaxIdleConns:    queueSize / 4,
+		MaxIdleConns:    maxidleconns,
 		IdleConnTimeout: 1 * time.Second,
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
@@ -50,7 +80,7 @@ func main() {
 
 	httpc := &http.Client{Transport: tr}
 
-	queue := make(chan struct{}, queueSize)
+	queue := make(chan struct{}, *nthread)
 	count := 1
 
 	for {
