@@ -6,13 +6,14 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
 	Bi "github.com/marcelino-m/transantiago-srv/bi"
 	"github.com/marcelino-m/transantiago-srv/fetcher"
 	"github.com/marcelino-m/transantiago-srv/gtfs"
-	"strings"
 )
 
 func main() {
@@ -81,44 +82,38 @@ func main() {
 	httpc := &http.Client{Transport: tr}
 
 	queue := make(chan struct{}, *nthread)
-	count := 1
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 
-	for {
-		for _, s := range stops {
-			queue <- struct{}{}
-			log.Printf("go routine %d", count)
-			count++
-			go worker(httpc, s, redisc, queue, 0)
-		}
+	for _, s := range stops {
+		go worker(httpc, s, redisc, queue)
 	}
+
+	wg.Wait()
 }
 
-func worker(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q <-chan struct{}, retrytime int) {
+func worker(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan struct{}) {
 
-	if retrytime > 10 {
-		// TODO: Handle this
-		log.Println("can't get data from stop %s, retry canceled after 10 times")
-		<-q
-		return
+	for {
+		q <- struct{}{}
+		for {
+			buses, err := fetcher.FetchStopData(s.Id(), httpc)
+			if err != nil {
+				log.Printf("Erro geting data to stop %s, ", s.Id())
+				log.Println(err)
+				continue
+			}
+
+			<-q
+
+			for _, b := range buses {
+				stopKey := fmt.Sprintf("stop:%s", s.Id())
+				busKey := fmt.Sprintf("bus:%s", b.Id())
+				redisc.HSet(stopKey, b.Id(), b.DistToStop())
+				redisc.HSet(busKey, s.Id(), b.DistToStop())
+			}
+			fmt.Printf("%+v\n", "Done!")
+			break
+		}
 	}
-
-	log.Printf("Proces stop %s", s.Id())
-	buses, err := fetcher.FetchStopData(s.Id(), httpc)
-	if err != nil {
-		log.Printf("Erro geting data to stop %s, ", s.Id())
-		log.Println(err)
-		go worker(httpc, s, redisc, q, retrytime+1)
-		return
-	}
-
-	<-q
-
-	for _, b := range buses {
-		stopKey := fmt.Sprintf("stop:%s", s.Id())
-		busKey := fmt.Sprintf("bus:%s", b.Id())
-		redisc.HSet(stopKey, b.Id(), b.DistToStop())
-		redisc.HSet(busKey, s.Id(), b.DistToStop())
-	}
-
-	fmt.Printf("Done stop %s\n", s.Id())
 }
