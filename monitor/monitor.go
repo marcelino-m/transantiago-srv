@@ -14,6 +14,7 @@ import (
 	Bi "github.com/marcelino-m/transantiago-srv/bi"
 	"github.com/marcelino-m/transantiago-srv/fetcher"
 	"github.com/marcelino-m/transantiago-srv/gtfs"
+	"strconv"
 )
 
 func main() {
@@ -107,12 +108,10 @@ func worker(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan struc
 			<-q
 
 			for _, b := range buses {
-				stopKey := fmt.Sprintf("stop:%s", s.Id())
 				busKey := fmt.Sprintf("bus:%s", b.Id())
-				redisc.HSet(stopKey, b.Id(), b.DistToStop())
-				redisc.HSet(busKey, s.Id(), b.DistToStop())
+				redisc.Set(busKey, s.Id()+":"+strconv.FormatFloat(b.DistToStop(), 'f', 2, 64), 0)
 			}
-			fmt.Printf("%+v\n", "Done!")
+
 			break
 		}
 	}
