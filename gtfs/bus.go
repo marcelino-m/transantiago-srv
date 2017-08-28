@@ -1,7 +1,8 @@
 package gtfs
 
 import (
-	"time"
+	"strconv"
+	"strings"
 )
 
 type BusDat struct {
@@ -14,7 +15,7 @@ type BusDat struct {
 
 // NewBus create a new bus
 func NewBus(id, route, arrtime, dist string) *BusDat {
-	return &BusDat{id: id, route: route}
+	return &BusDat{id: id, route: route, arrivaltime: arrtime, dist: dist}
 }
 
 func (bus *BusDat) Id() string {
@@ -29,12 +30,16 @@ func (bus *BusDat) GoingToStop() string {
 	return bus.goToStop
 }
 
-func (bus *BusDat) ArrivalTime() time.Duration {
-	return time.Second * 0
-}
+// func (bus *BusDat) ArrivalTime() time.Duration {
+// 	return time.Second * 0
+// }
 
 func (bus *BusDat) DistToStop() float64 {
-	return 0
+	// the formats is: number mts.
+	tmp := strings.Split(bus.dist, " ")
+	f, _ := strconv.ParseFloat(strings.Trim(tmp[0], " "), 64)
+	return f
+
 }
 
 func (bus *BusDat) SetArrivalTime(art string) {
