@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/go-redis/redis"
 	"github.com/marcelino-m/transantiago-srv/fetcher"
@@ -24,7 +23,8 @@ func monitor(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan stru
 
 			for _, b := range buses {
 				busKey := fmt.Sprintf("bus:%s", b.Id())
-				redisc.Set(busKey, s.Id()+":"+strconv.FormatFloat(b.DistToStop(), 'f', 2, 64), 0)
+				m := map[string]interface{}{"stop": s.Id(), "dist": b.DistToStop()}
+				redisc.HMSet(busKey, m)
 			}
 
 			break
