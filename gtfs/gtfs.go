@@ -109,7 +109,7 @@ func (gtfs Gtfs) Shape(route *Route, dir Direction) (*Shape, error) {
 	}
 
 	defer rows.Close()
-	shape := Shape{}
+	shape := NewShape()
 	var lat, lon float64
 
 	for rows.Next() {
@@ -125,7 +125,7 @@ func (gtfs Gtfs) Shape(route *Route, dir Direction) (*Shape, error) {
 
 	shape.Transform(geo.Mercator.Project)
 
-	return &shape, nil
+	return shape, nil
 }
 
 //  Get all routes

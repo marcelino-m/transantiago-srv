@@ -14,13 +14,16 @@ import (
 	"github.com/marcelino-m/transantiago-srv/gtfs"
 )
 
+var bi *Bi.Bi
+
 func main() {
 
 	stopmon := flag.String("stop", "all", "Stops to momintor")
 	nthread := flag.Int("nthread", 200, "Number of concurrent request")
 	flag.Parse()
 
-	bi, err := Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db")
+	var err error
+	bi, err = Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db")
 
 	if err != nil {
 		log.Fatalln("Fail to connect to gtfs DB (sqlite3 backend)")
@@ -81,6 +84,14 @@ func main() {
 
 	queue := make(chan struct{}, *nthread)
 	wg := sync.WaitGroup{}
+	log.Println("Initialize bi...")
+	err = bi.InitializeBi()
+	if err != nil {
+		log.Fatal("Fail to initialize bi!.\n: ", err)
+	} else {
+		log.Println("Bi redy is ready")
+	}
+
 	wg.Add(1)
 
 	for _, s := range stops {

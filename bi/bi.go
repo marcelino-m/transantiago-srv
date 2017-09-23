@@ -1,7 +1,8 @@
 package bi
 
 import (
-	"math"
+	"errors"
+	"fmt"
 
 	Gtfs "github.com/marcelino-m/transantiago-srv/gtfs"
 	"github.com/paulmach/go.geo"
@@ -31,7 +32,6 @@ func NewCicle() *Cicle {
 // NewBi ...
 func NewBi(gtfsdb string) (*Bi, error) {
 	gtfs, err := Gtfs.Connect(gtfsdb)
-	defer gtfs.Close()
 
 	if err != nil {
 		return nil, err
@@ -41,6 +41,7 @@ func NewBi(gtfsdb string) (*Bi, error) {
 		routecicle: make(map[string]*Cicle),
 		allstops:   make(map[string]*Gtfs.Stop),
 		allroutes:  make(map[string]*Gtfs.Route),
+		gtfs:       &gtfs,
 	}
 
 	bi.allstops, err = gtfs.AllStops()
@@ -62,9 +63,8 @@ func NewBi(gtfsdb string) (*Bi, error) {
 //  so we can postpone until the last minute
 func (bi *Bi) InitializeBi() error {
 
-	var err error = nil
 	gtfs := bi.gtfs
-
+	var err error
 	for _, r := range bi.allroutes {
 		cicle := NewCicle()
 
@@ -133,48 +133,28 @@ func (bi *Bi) Route(routeid string) *Gtfs.Route {
 	return r
 }
 
-//  Deduce position from bus metadata
-func (bi *Bi) Position(bus *Gtfs.BusDat) *geo.Point {
-	stop := bi.Stop(bus.Id())
+//  Deduce position from bus metadata, asume disatance informed by
+//  transantiago is along shape
+func (bi *Bi) Position(bus *Gtfs.BusDat) (*geo.Point, error) {
+
+	stop := bi.Stop(bus.GoingToStop())
+	if stop == nil {
+		return nil, errors.New(fmt.Sprintf("Stop code not found %s", bus.GoingToStop()))
+	}
+
 	route := bi.Route(bus.Route())
-	if stop == nil || route == nil {
-		return nil
+	if route == nil {
+		return nil, errors.New(fmt.Sprintf("Route code not found %s", bus.Route()))
 	}
 
 	shape := bi.Shape(route, stop)
-	dis2stop := bus.DistToStop()
-	length := shape.Length()
-	eps := 10.0
-
-	for i := 0; i < length; i++ {
-		dis := stop.DistanceFrom(shape.GetAt(i))
-		delta := dis2stop - dis
-		if math.Abs(delta) <= eps {
-			return shape.GetAt(i)
-		} else if delta < 0 {
-			continue
-		}
-
-		line := geo.NewLine(shape.GetAt(i-1), shape.GetAt(i))
-		step := 0.5
-		t := step
-		for {
-			// binary search
-			p := line.Interpolate(t)
-			dis = stop.DistanceFrom(p)
-			delta = dis2stop - dis
-			if math.Abs(delta) <= eps {
-				return p
-			} else if delta < 0 {
-				step /= 2
-				t += step
-			} else {
-				step /= 2
-				t -= step
-			}
-		}
-
+	if shape == nil {
+		return nil, errors.New(fmt.Sprintf("Shape not found for stop %s and route %s", stop.Id(), route.Id()))
 	}
 
-	return nil
+	stopDist := shape.Measure(&stop.Point)
+	rel := (stopDist - bus.DistToStop()) / shape.Distance()
+
+	return shape.Interpolate(rel), nil
+
 }
