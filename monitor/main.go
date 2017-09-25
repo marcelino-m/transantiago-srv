@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-redis/redis"
 	Bi "github.com/marcelino-m/transantiago-srv/bi"
-	"github.com/marcelino-m/transantiago-srv/gtfs"
 )
 
 var bi *Bi.Bi
@@ -23,31 +22,18 @@ func main() {
 	flag.Parse()
 
 	var err error
-	bi, err = Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db")
-
-	if err != nil {
-		log.Fatalln("Fail to connect to gtfs DB (sqlite3 backend)")
-	}
-
-	var stops []*gtfs.Stop
-
 	if *stopmon == "all" {
-		tmp := bi.AllStop()
-		for _, s := range tmp {
-			stops = append(stops, s)
+		bi, err = Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db", "all")
+		if err != nil {
+			log.Fatalln("Fail to connect to gtfs DB (sqlite3 backend)")
 		}
 	} else {
 		bs := strings.Split(*stopmon, ",")
-		for _, b := range bs {
-			if b == "" {
-				continue
-			}
-			stop := bi.Stop(strings.ToUpper(b))
-			if stop == nil {
-				log.Fatalf("No exit stops %s\n", b)
-			}
-			stops = append(stops, stop)
+		bi, err = Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db", bs...)
+		if err != nil {
+			log.Fatal(err)
 		}
+
 	}
 
 	if err != nil {
@@ -94,7 +80,7 @@ func main() {
 
 	wg.Add(1)
 
-	for _, s := range stops {
+	for _, s := range bi.AllStop() {
 		go monitor(httpc, s, redisc, queue)
 	}
 

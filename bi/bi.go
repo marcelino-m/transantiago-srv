@@ -6,6 +6,7 @@ import (
 
 	Gtfs "github.com/marcelino-m/transantiago-srv/gtfs"
 	"github.com/paulmach/go.geo"
+	"strings"
 )
 
 type Cicle struct {
@@ -30,32 +31,73 @@ func NewCicle() *Cicle {
 }
 
 // NewBi ...
-func NewBi(gtfsdb string) (*Bi, error) {
-	gtfs, err := Gtfs.Connect(gtfsdb)
+func NewBi(gtfsdb string, stops ...string) (*Bi, error) {
 
+	gtfs, err := Gtfs.Connect(gtfsdb)
 	if err != nil {
 		return nil, err
 	}
 
-	bi := Bi{
+	bi := &Bi{
 		routecicle: make(map[string]*Cicle),
 		allstops:   make(map[string]*Gtfs.Stop),
 		allroutes:  make(map[string]*Gtfs.Route),
 		gtfs:       &gtfs,
 	}
 
-	bi.allstops, err = gtfs.AllStops()
+	if len(stops) == 0 || (len(stops) == 1 && stops[0] == "all") {
+		return loadAll(bi)
+	} else {
+		return loadOnly(bi, stops...)
+	}
+
+}
+
+//  Load all infraestructure for posterior initialization
+func loadAll(bi *Bi) (*Bi, error) {
+
+	var err error
+
+	bi.allstops, err = bi.gtfs.AllStops()
 	if err != nil {
 		return nil, err
 	}
 
-	bi.allroutes, err = gtfs.Routes()
+	bi.allroutes, err = bi.gtfs.Routes()
 	if err != nil {
 		return nil, err
 	}
 
-	return &bi, nil
+	return bi, nil
+}
 
+// loadOnly ...
+func loadOnly(bi *Bi, stops ...string) (*Bi, error) {
+
+	allstop, err := bi.gtfs.AllStops()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, s := range stops {
+		sid := strings.ToUpper(s)
+		stop, ok := allstop[sid]
+		if !ok {
+			return nil, errors.New(fmt.Sprint("No exit stops %s", sid))
+		}
+		routes, err := bi.gtfs.RoutesByStop(stop)
+		if err != nil {
+			return nil, err
+		}
+
+		for id, r := range routes {
+			bi.allroutes[id] = r
+		}
+
+		bi.allstops[sid] = stop
+	}
+
+	return bi, nil
 }
 
 //  InitializeBi Initialize internal state of Bi, this operation
@@ -118,7 +160,7 @@ func (bi *Bi) Stop(stopid string) *Gtfs.Stop {
 	return stop
 }
 
-//  Get all Stop from stopid
+//  Get all Stop
 func (bi *Bi) AllStop() map[string]*Gtfs.Stop {
 	return bi.allstops
 }

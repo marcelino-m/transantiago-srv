@@ -32,20 +32,21 @@ func monitor(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan stru
 					continue
 				}
 
-				var lon, lat float64 = 0, 0
+				var ptoll *geo.Point
+
 				if pto != nil {
-					c := pto.Clone()
-					c.Transform(geo.Mercator.Inverse)
-					lon = c.Lng()
-					lat = c.Lat()
+					ptoll = pto.Clone()
+					ptoll.Transform(geo.Mercator.Inverse)
+				} else {
+					ptoll = geo.NewPoint(0, 0)
 				}
 
 				m := map[string]interface{}{
 					"stop":  s.Id(),
 					"dist":  b.DistToStop(),
-					"lon":   lon,
-					"lat":   lat,
 					"route": b.Route(),
+					"lon":   ptoll.Lng(),
+					"lat":   ptoll.Lat(),
 				}
 
 				redisc.HMSet(busKey, m)
