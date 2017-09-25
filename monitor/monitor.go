@@ -23,6 +23,8 @@ func monitor(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan stru
 
 			<-q
 
+			all := make(map[string]interface{})
+
 			for _, b := range buses {
 				busKey := fmt.Sprintf("bus:%s", b.Id())
 				pto, err := bi.Position(b)
@@ -49,8 +51,11 @@ func monitor(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan stru
 					"lat":   ptoll.Lat(),
 				}
 
+				all[b.Id()] = fmt.Sprintf("[%f,%f]", ptoll.Lng(), ptoll.Lat())
 				redisc.HMSet(busKey, m)
 			}
+
+			redisc.HMSet("curr:buses", all)
 
 			break
 		}
