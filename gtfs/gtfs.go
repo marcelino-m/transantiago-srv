@@ -59,6 +59,7 @@ func (gtfs Gtfs) AllStops() (map[string]*Stop, error) {
 	return stops, nil
 }
 
+// StopsByRoute return stops in routes limited on `astops'
 func (gtfs Gtfs) StopsByRoute(route *Route, dir Direction, astops map[string]*Stop) ([]*Stop, error) {
 	rows, err := gtfs.conn.Query(
 		`SELECT stop_id FROM stop_times
@@ -85,7 +86,10 @@ func (gtfs Gtfs) StopsByRoute(route *Route, dir Direction, astops map[string]*St
 			return nil, err
 		}
 
-		stops = append(stops, astops[stopid])
+		stop, ok := astops[stopid]
+		if ok {
+			stops = append(stops, stop)
+		}
 	}
 
 	return stops, nil
