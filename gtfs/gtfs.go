@@ -95,6 +95,38 @@ func (gtfs Gtfs) StopsByRoute(route *Route, dir Direction, astops map[string]*St
 	return stops, nil
 }
 
+//  ...
+func (gtfs Gtfs) RoutesByStop(stop *Stop) (map[string]*Route, error) {
+	rows, err := gtfs.conn.Query(
+		`SELECT route_id, route_short_name, route_long_name FROM routes WHERE route_id IN (
+           SELECT DISTINCT route_id FROM trips
+             WHERE trip_id IN (
+              SELECT DISTINCT trip_id FROM stop_times WHERE stop_id = ?
+             )
+          )`,
+		stop.Id(),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	routes := make(map[string]*Route)
+
+	for rows.Next() {
+		r := Route{}
+		err := rows.Scan(&r.id, &r.sname, &r.lname)
+		if err != nil {
+			return nil, err
+		}
+
+		routes[r.Id()] = &r
+	}
+
+	return routes, nil
+}
+
 // Get a shape  by route and direction
 func (gtfs Gtfs) Shape(route *Route, dir Direction) (*Shape, error) {
 
