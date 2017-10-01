@@ -33,25 +33,19 @@ func monitor(s *gtfs.Stop, route string, httpc *http.Client, redisc *redis.Clien
 						continue
 					}
 				}
-				if b.DistToStop() > 1650 {
-					continue
-				}
+
 				busKey := fmt.Sprintf("bus:%s", b.Id())
-				pto, err := bi.Position(b)
+				pto, dir, relpos, err := bi.Position(b)
 
 				if err != nil {
 					log.Println(err)
 					continue
+				} else if !bi.IsNewPos(b, dir, relpos) {
+					continue
 				}
 
-				var ptoll *geo.Point
-
-				if pto != nil {
-					ptoll = pto.Clone()
-					ptoll.Transform(geo.Mercator.Inverse)
-				} else {
-					ptoll = geo.NewPoint(0, 0)
-				}
+				ptoll := pto.Clone()
+				ptoll.Transform(geo.Mercator.Inverse)
 
 				m := map[string]interface{}{
 					"stop":  s.Id(),

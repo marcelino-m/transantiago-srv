@@ -7,6 +7,7 @@ import (
 type Shape struct {
 	geo.Path
 	lenShape float64
+	dir      Direction
 }
 
 // NewShape ...
@@ -14,6 +15,7 @@ func NewShape() *Shape {
 	return &Shape{
 		Path:     *geo.NewPath(),
 		lenShape: -1,
+		dir:      -1,
 	}
 }
 
@@ -25,4 +27,8 @@ func (shape *Shape) Distance() float64 {
 	} else {
 		return shape.lenShape
 	}
+}
+
+func (shape *Shape) Direction() Direction {
+	return shape.dir
 }

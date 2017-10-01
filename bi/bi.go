@@ -14,10 +14,16 @@ type Cicle struct {
 	stop2shape map[string]*Gtfs.Shape
 }
 
+type currPos struct {
+	dir    Gtfs.Direction
+	relpos float64
+}
+
 type Bi struct {
 	routecicle map[string]*Cicle
 	allstops   map[string]*Gtfs.Stop
 	allroutes  map[string]*Gtfs.Route
+	currpos    map[string]*currPos
 	gtfs       *Gtfs.Gtfs
 }
 
@@ -41,6 +47,7 @@ func NewBiFromStops(gtfsdb string, stops ...string) (*Bi, error) {
 		routecicle: make(map[string]*Cicle),
 		allstops:   make(map[string]*Gtfs.Stop),
 		allroutes:  make(map[string]*Gtfs.Route),
+		currpos:    make(map[string]*currPos),
 		gtfs:       &gtfs,
 	}
 
@@ -63,6 +70,7 @@ func NewBiFromRoute(gtfsdb string, route string) (*Bi, error) {
 		routecicle: make(map[string]*Cicle),
 		allstops:   make(map[string]*Gtfs.Stop),
 		allroutes:  make(map[string]*Gtfs.Route),
+		currpos:    make(map[string]*currPos),
 		gtfs:       &gtfs,
 	}
 
@@ -229,26 +237,49 @@ func (bi *Bi) Route(routeid string) *Gtfs.Route {
 
 //  Deduce position from bus metadata, asume disatance informed by
 //  transantiago is along shape
-func (bi *Bi) Position(bus *Gtfs.BusDat) (*geo.Point, error) {
+func (bi *Bi) Position(bus *Gtfs.BusDat) (*geo.Point, Gtfs.Direction, float64, error) {
 
 	stop := bi.Stop(bus.GoingToStop())
 	if stop == nil {
-		return nil, errors.New(fmt.Sprintf("Stop code not found %s", bus.GoingToStop()))
+		return nil, Gtfs.None, -1, errors.New(fmt.Sprintf("Stop code not found %s", bus.GoingToStop()))
 	}
 
 	route := bi.Route(bus.Route())
 	if route == nil {
-		return nil, errors.New(fmt.Sprintf("Route code not found %s", bus.Route()))
+		return nil, Gtfs.None, -1, errors.New(fmt.Sprintf("Route code not found %s", bus.Route()))
 	}
 
 	shape := bi.Shape(route, stop)
 	if shape == nil {
-		return nil, errors.New(fmt.Sprintf("Shape not found for stop %s and route %s", stop.Id(), route.Id()))
+		return nil, Gtfs.None, -1, errors.New(fmt.Sprintf("Shape not found for stop %s and route %s", stop.Id(), route.Id()))
 	}
 
 	stopDist := shape.Measure(&stop.Point)
 	rel := (stopDist - bus.DistToStop()) / shape.Distance()
 
-	return shape.Interpolate(rel), nil
+	return shape.Interpolate(rel), shape.Direction(), rel, nil
 
+}
+
+//  ...
+func (bi *Bi) IsNewPos(bus *Gtfs.BusDat, dir Gtfs.Direction, relpos float64) bool {
+	curr, ok := bi.currpos[bus.Id()]
+	if !ok {
+		bi.currpos[bus.Id()] = &currPos{
+			dir:    dir,
+			relpos: relpos,
+		}
+		return true
+	}
+
+	if curr.dir != dir {
+		curr.relpos = relpos
+		curr.dir = dir
+		return true
+	} else if curr.relpos < relpos {
+		curr.relpos = relpos
+		return true
+	} else {
+		return false
+	}
 }

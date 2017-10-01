@@ -146,6 +146,7 @@ func (gtfs Gtfs) Shape(route *Route, dir Direction) (*Shape, error) {
 
 	defer rows.Close()
 	shape := NewShape()
+	shape.dir = dir
 	var lat, lon float64
 
 	for rows.Next() {
