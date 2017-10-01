@@ -9,15 +9,17 @@ import (
 	"github.com/marcelino-m/transantiago-srv/fetcher"
 	"github.com/marcelino-m/transantiago-srv/gtfs"
 	"github.com/paulmach/go.geo"
+	"strings"
 )
 
-func monitor(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan struct{}) {
+func monitor(s *gtfs.Stop, route string, httpc *http.Client, redisc *redis.Client, q chan struct{}) {
 
 	for {
 		q <- struct{}{}
 		for {
 			buses, err := fetcher.FetchStopData(s.Id(), httpc)
 			if err != nil {
+				log.Print("Error:", err)
 				continue
 			}
 
@@ -26,6 +28,14 @@ func monitor(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan stru
 			all := make(map[string]interface{})
 
 			for _, b := range buses {
+				if route != "" {
+					if !strings.EqualFold(b.Route(), route) {
+						continue
+					}
+				}
+				if b.DistToStop() > 1650 {
+					continue
+				}
 				busKey := fmt.Sprintf("bus:%s", b.Id())
 				pto, err := bi.Position(b)
 
@@ -51,11 +61,26 @@ func monitor(httpc *http.Client, s *gtfs.Stop, redisc *redis.Client, q chan stru
 					"lat":   ptoll.Lat(),
 				}
 
-				all[b.Id()] = fmt.Sprintf("[%f,%f]", ptoll.Lng(), ptoll.Lat())
-				redisc.HMSet(busKey, m)
+				all[b.Id()] = fmt.Sprintf(
+					"{\"pos\":[%v,%v], \"id\": \"%v\"}",
+					ptoll.Lng(),
+					ptoll.Lat(),
+					busKey,
+				)
+
+				_, err = redisc.HMSet(busKey, m).Result()
+				if err != nil {
+					log.Print("Error inserting bus in redis:", err)
+				}
+
 			}
 
-			redisc.HMSet("curr:buses", all)
+			if len(all) != 0 {
+				_, err = redisc.HMSet("curr:buses", all).Result()
+				if err != nil {
+					log.Print("Erro inserting in redis:", err)
+				}
+			}
 
 			break
 		}

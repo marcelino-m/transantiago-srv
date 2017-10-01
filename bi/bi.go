@@ -6,7 +6,6 @@ import (
 
 	Gtfs "github.com/marcelino-m/transantiago-srv/gtfs"
 	"github.com/paulmach/go.geo"
-	"strings"
 )
 
 type Cicle struct {
@@ -31,7 +30,7 @@ func NewCicle() *Cicle {
 }
 
 // NewBi ...
-func NewBi(gtfsdb string, stops ...string) (*Bi, error) {
+func NewBiFromStops(gtfsdb string, stops ...string) (*Bi, error) {
 
 	gtfs, err := Gtfs.Connect(gtfsdb)
 	if err != nil {
@@ -45,11 +44,29 @@ func NewBi(gtfsdb string, stops ...string) (*Bi, error) {
 		gtfs:       &gtfs,
 	}
 
-	if len(stops) == 0 || (len(stops) == 1 && stops[0] == "all") {
+	if len(stops) == 0 {
 		return loadAll(bi)
 	} else {
-		return loadOnly(bi, stops...)
+		return loadOnlyStops(bi, stops...)
 	}
+
+}
+
+func NewBiFromRoute(gtfsdb string, route string) (*Bi, error) {
+
+	gtfs, err := Gtfs.Connect(gtfsdb)
+	if err != nil {
+		return nil, err
+	}
+
+	bi := &Bi{
+		routecicle: make(map[string]*Cicle),
+		allstops:   make(map[string]*Gtfs.Stop),
+		allroutes:  make(map[string]*Gtfs.Route),
+		gtfs:       &gtfs,
+	}
+
+	return loadOnlyRoute(bi, route)
 
 }
 
@@ -72,7 +89,7 @@ func loadAll(bi *Bi) (*Bi, error) {
 }
 
 // loadOnly ...
-func loadOnly(bi *Bi, stops ...string) (*Bi, error) {
+func loadOnlyStops(bi *Bi, stops ...string) (*Bi, error) {
 
 	allstop, err := bi.gtfs.AllStops()
 	if err != nil {
@@ -80,10 +97,9 @@ func loadOnly(bi *Bi, stops ...string) (*Bi, error) {
 	}
 
 	for _, s := range stops {
-		sid := strings.ToUpper(s)
-		stop, ok := allstop[sid]
+		stop, ok := allstop[s]
 		if !ok {
-			return nil, errors.New(fmt.Sprint("No exit stops %s", sid))
+			return nil, errors.New(fmt.Sprintf("No exit stops %s", s))
 		}
 		routes, err := bi.gtfs.RoutesByStop(stop)
 		if err != nil {
@@ -94,7 +110,43 @@ func loadOnly(bi *Bi, stops ...string) (*Bi, error) {
 			bi.allroutes[id] = r
 		}
 
-		bi.allstops[sid] = stop
+		bi.allstops[s] = stop
+	}
+
+	return bi, nil
+}
+
+// loadOnlyRoute ...
+func loadOnlyRoute(bi *Bi, route string) (*Bi, error) {
+	stops, err1 := bi.gtfs.AllStops()
+	if err1 != nil {
+		return nil, err1
+	}
+
+	r, err2 := bi.gtfs.Route(route)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	bi.allroutes[r.Id()] = r
+	sg, err3 := bi.gtfs.StopsByRoute(r, Gtfs.Going, stops)
+
+	if err3 != nil {
+		return nil, err3
+	}
+
+	for _, s := range sg {
+		bi.allstops[s.Id()] = s
+	}
+
+	sr, err4 := bi.gtfs.StopsByRoute(r, Gtfs.Regress, stops)
+
+	if err4 != nil {
+		return nil, err4
+	}
+
+	for _, s := range sr {
+		bi.allstops[s.Id()] = s
 	}
 
 	return bi, nil

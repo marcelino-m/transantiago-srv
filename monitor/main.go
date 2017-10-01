@@ -2,42 +2,54 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
 	Bi "github.com/marcelino-m/transantiago-srv/bi"
+	"strings"
 )
 
 var bi *Bi.Bi
 
-func main() {
+// Stops flags
+type StopFlag []string
 
-	stopmon := flag.String("stop", "all", "Stops to momintor")
-	nthread := flag.Int("nthread", 200, "Number of concurrent request")
+//  ...
+func (s *StopFlag) String() string {
+	return fmt.Sprintf("%v", *s)
+}
+
+//  ...
+func (s *StopFlag) Set(value string) error {
+	*s = append(*s, strings.ToUpper(value))
+	return nil
+}
+
+func main() {
+	stops := StopFlag{}
+
+	flag.Var(&stops, "stop", "Stop to momintor, you can pas multiple `-stop'")
+	route := flag.String("route", "", "Route to monitor")
+	nthread := flag.Int("nth", 200, "Number of concurrent request")
+
 	flag.Parse()
 
 	var err error
-	if *stopmon == "all" {
-		bi, err = Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db", "all")
-		if err != nil {
-			log.Fatalln("Fail to connect to gtfs DB (sqlite3 backend)")
-		}
+	if *route != "" {
+		bi, err = Bi.NewBiFromRoute("/home/marcelo/lab/tase/gtfs/gtfs.db", *route)
 	} else {
-		bs := strings.Split(*stopmon, ",")
-		bi, err = Bi.NewBi("/home/marcelo/lab/tase/gtfs/gtfs.db", bs...)
-		if err != nil {
-			log.Fatal(err)
-		}
-
+		bi, err = Bi.NewBiFromStops("/home/marcelo/lab/tase/gtfs/gtfs.db", stops...)
 	}
 
 	if err != nil {
-		log.Fatalln("Fail to get stops data")
+		if err != nil {
+			log.Fatal("Fail to initialize deamon\n Error:", err)
+		}
 	}
 
 	redisc := redis.NewClient(&redis.Options{
@@ -81,7 +93,7 @@ func main() {
 	wg.Add(1)
 
 	for _, s := range bi.AllStop() {
-		go monitor(httpc, s, redisc, queue)
+		go monitor(s, *route, httpc, redisc, queue)
 	}
 
 	wg.Wait()

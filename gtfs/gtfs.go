@@ -189,3 +189,19 @@ func (gtfs Gtfs) Routes() (map[string]*Route, error) {
 
 	return routes, nil
 }
+
+//  Get a route
+func (gtfs Gtfs) Route(route string) (*Route, error) {
+	row := gtfs.conn.QueryRow(
+		"SELECT route_id, route_short_name, route_long_name  FROM routes WHERE route_id = ?",
+		route,
+	)
+
+	r := Route{}
+	err := row.Scan(&r.id, &r.sname, &r.lname)
+	if err != nil {
+		return nil, err
+	}
+
+	return &r, nil
+}
